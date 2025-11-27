@@ -1,6 +1,7 @@
 #![forbid(clippy::unwrap_used)]
 #![allow(clippy::needless_return)]
 
+// use graft_sqlite_extension::graft_static_init;
 use parking_lot::RwLock;
 use rusqlite::functions::FunctionFlags;
 use std::path::PathBuf;
@@ -46,6 +47,34 @@ pub fn apply_default_pragmas(conn: &rusqlite::Connection) -> Result<(), rusqlite
   return Ok(());
 }
 
+// FIXME: unwraps/expects.
+fn graft_config() -> graft::ExtensionConfig {
+  let path = std::env::current_dir().expect("FIXME").join("graft");
+
+  let data_dir = path.join("data");
+  if !data_dir.exists() {
+    if let Err(err) = std::fs::create_dir_all(&data_dir) {
+            log::error!("Failed to create {data_dir:?}: {err}");
+        }
+  }
+
+  // let remote = {
+  //   let remote_dir = path.join("remote");
+  //   if !remote_dir.exists() {
+  //     std::fs::create_dir_all(&remote_dir).unwrap();
+  //   }
+  //   graft::RemoteConfig::Fs { root: remote_dir }
+  // };
+
+  return graft::ExtensionConfig {
+    data_dir,
+    remote: graft::RemoteConfig::Memory,
+    make_default: false,
+    log_file: None,
+    ..Default::default()
+  };
+}
+
 #[allow(unsafe_code)]
 pub fn connect_sqlite(
   path: Option<PathBuf>,
@@ -56,6 +85,18 @@ pub fn connect_sqlite(
     unsafe { rusqlite::ffi::sqlite3_auto_extension(Some(init_sqlean_and_vector_search)) };
   if status != 0 {
     return Err(Error::Other("Failed to load extensions".into()));
+  }
+
+  if path.is_some() {
+    let (opts, vfs) = graft::init_vfs(graft_config()).map_err(|err| {
+      return Error::Other(format!("Failed to load Graft VGS: {err}").into());
+    })?;
+
+    if let Err(err) = sqlite_plugin::vfs::register_static(c"graft".to_owned(), vfs, opts) {
+      return Err(Error::Other(
+        format!("Failed to load Graft VGS: {err}").into(),
+      ));
+    }
   }
 
   // Then open database and load trailbase_extensions.

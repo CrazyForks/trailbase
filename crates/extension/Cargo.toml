@@ -15,6 +15,7 @@ crate-type=["cdylib", "rlib"]
 arc-swap = "1.7.1"
 argon2 = { version = "^0.5.3", default-features = false, features = ["alloc", "password-hash", "rand", "std"] }
 base64 = { version = "0.22.1", default-features = false }
+graft-sqlite-extension = { git = "https://github.com/ignatz/graft.git", branch = "disable_logger" }
 jsonschema = { version = "0.37.1", default-features = false }
 log = "0.4.27"
 maxminddb = "0.26.0"
@@ -24,6 +25,7 @@ regex = "1.11.0"
 rusqlite = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sqlite-plugin = "0.4.1"
 sqlite-vec = { workspace = true }
 thiserror = "2.0.12"
 trailbase-sqlean = { workspace = true }
