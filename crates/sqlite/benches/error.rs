@@ -9,4 +9,7 @@ pub enum BenchmarkError {
 
   #[error("TrailBase error: {0}")]
   TrailBase(#[from] trailbase_sqlite::Error),
+
+  #[error("Extension error: {0}")]
+  Extension(#[from] trailbase_extension::Error),
 }
