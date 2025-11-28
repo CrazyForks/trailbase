@@ -100,7 +100,7 @@ trailbase-sqlvalue = { workspace = true, features = ["rusqlite"] }
 trailbase-wasm-common = { workspace = true }
 trailbase-wasm-runtime-host = { workspace = true, optional = true }
 ts-rs = { workspace = true }
-url = { version = "^2.4.1", default-features = false }
+url = { workspace = true }
 utoipa = { version = "5.0.0-beta.0", features = ["axum_extras"] }
 uuid = { workspace = true }
 validator = { version = "0.20.0", default-features = false }

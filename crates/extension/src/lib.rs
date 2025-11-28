@@ -1,7 +1,6 @@
 #![forbid(clippy::unwrap_used)]
 #![allow(clippy::needless_return)]
 
-// use graft_sqlite_extension::graft_static_init;
 use parking_lot::RwLock;
 use rusqlite::functions::FunctionFlags;
 use std::path::PathBuf;
@@ -47,11 +46,9 @@ pub fn apply_default_pragmas(conn: &rusqlite::Connection) -> Result<(), rusqlite
   return Ok(());
 }
 
-// FIXME: unwraps/expects.
-fn graft_config() -> graft_sqlite::GraftConfig {
-  let path = std::env::current_dir().expect("FIXME").join("graft");
-
-  let data_dir = path.join("data");
+#[cfg(feature = "graft")]
+fn graft_config(path: std::path::PathBuf) -> graft_kernel::setup::GraftConfig {
+  let data_dir = path.join("local");
   if !data_dir.exists() {
     if let Err(err) = std::fs::create_dir_all(&data_dir) {
       log::error!("Failed to create {data_dir:?}: {err}");
@@ -66,9 +63,9 @@ fn graft_config() -> graft_sqlite::GraftConfig {
   //   graft::RemoteConfig::Fs { root: remote_dir }
   // };
 
-  return graft_sqlite::GraftConfig {
+  return graft_kernel::setup::GraftConfig {
     data_dir,
-    remote: graft_sqlite::RemoteConfig::Memory,
+    remote: graft_kernel::remote::RemoteConfig::Memory,
     autosync: None,
   };
 }
@@ -85,11 +82,17 @@ pub fn connect_sqlite(
     return Err(Error::Other("Failed to load extensions".into()));
   }
 
-  // TODO: This should be conditionally based on url's "vfs" param.
-  if path.is_some() {
-    graft_sqlite::register_static(false, graft_config()).map_err(|err| {
-      return Error::Other(format!("Failed to load Graft VGS: {err}").into());
-    })?;
+  #[cfg(feature = "graft")]
+  if let Some(ref path) = path {
+    if let Ok(url) = url::Url::parse(&path.to_string_lossy()) {
+      if url.query_pairs().any(|(k, v)| {
+        return k == "vfs" && v == "graft";
+      }) {
+        let config = graft_config(path.clone());
+        graft_sqlite::register_static("graft", false, config)
+          .map_err(|err| Error::Other(format!("Failed to load Graft VGS: {err}").into()))?;
+      }
+    }
   }
 
   // Then open database and load trailbase_extensions.
@@ -98,7 +101,8 @@ pub fn connect_sqlite(
       use rusqlite::OpenFlags;
       let flags = OpenFlags::SQLITE_OPEN_READ_WRITE
         | OpenFlags::SQLITE_OPEN_CREATE
-        | OpenFlags::SQLITE_OPEN_NO_MUTEX;
+        | OpenFlags::SQLITE_OPEN_NO_MUTEX
+        | OpenFlags::SQLITE_OPEN_URI;
 
       rusqlite::Connection::open_with_flags(p, flags)?
     } else {

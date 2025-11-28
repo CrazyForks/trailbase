@@ -27,11 +27,9 @@ pub(super) fn base64(context: &Context) -> Result<Value> {
       let text_str =
         std::str::from_utf8(text_bytes).map_err(|err| Error::UserFunctionError(err.into()))?;
 
-      Ok(Value::Blob(
-        BASE64_STANDARD
-          .decode(text_str)
-          .map_err(|err| Error::UserFunctionError(err.into()))?,
-      ))
+      Ok(Value::Blob(BASE64_STANDARD.decode(text_str).map_err(
+        |err| Error::UserFunctionError(err.to_string().into()),
+      )?))
     }
     v => Err(Error::InvalidFunctionParameterType(0, v.data_type())),
   };
@@ -60,11 +58,9 @@ pub(super) fn base64_url_safe(context: &Context) -> Result<Value> {
       let text_str =
         std::str::from_utf8(text_bytes).map_err(|err| Error::UserFunctionError(err.into()))?;
 
-      Ok(Value::Blob(
-        BASE64_URL_SAFE
-          .decode(text_str)
-          .map_err(|err| Error::UserFunctionError(err.into()))?,
-      ))
+      Ok(Value::Blob(BASE64_URL_SAFE.decode(text_str).map_err(
+        |err| Error::UserFunctionError(err.to_string().into()),
+      )?))
     }
     v => Err(Error::InvalidFunctionParameterType(0, v.data_type())),
   };

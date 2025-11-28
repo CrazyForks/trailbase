@@ -2312,8 +2312,8 @@ dependencies = [
 
 [[package]]
 name = "graft-core"
-version = "0.1.5"
-source = "git+https://github.com/ignatz/graft.git?branch=api#60e4b1fe41fab237a9492d8116bc16bf5fd79c20"
+version = "0.2.0-rc.2"
+source = "git+https://github.com/ignatz/graft.git#b098619a13b08a90c2ec0fcff04ff01836cf5554"
 dependencies = [
  "assert_matches",
  "bilrost",
@@ -2337,8 +2337,8 @@ dependencies = [
 
 [[package]]
 name = "graft-kernel"
-version = "0.1.5"
-source = "git+https://github.com/ignatz/graft.git?branch=api#60e4b1fe41fab237a9492d8116bc16bf5fd79c20"
+version = "0.2.0-rc.2"
+source = "git+https://github.com/ignatz/graft.git#b098619a13b08a90c2ec0fcff04ff01836cf5554"
 dependencies = [
  "async-stream",
  "bilrost",
@@ -2350,7 +2350,6 @@ dependencies = [
  "fjall",
  "futures",
  "graft-core",
- "graft-tracing",
  "itertools 0.14.0",
  "lsm-tree",
  "object_store",
@@ -2374,8 +2373,8 @@ dependencies = [
 
 [[package]]
 name = "graft-sqlite"
-version = "0.1.5"
-source = "git+https://github.com/ignatz/graft.git?branch=api#60e4b1fe41fab237a9492d8116bc16bf5fd79c20"
+version = "0.2.0-rc.2"
+source = "git+https://github.com/ignatz/graft.git#b098619a13b08a90c2ec0fcff04ff01836cf5554"
 dependencies = [
  "bytes",
  "bytestring",
@@ -2394,18 +2393,6 @@ dependencies = [
  "tracing",
  "tryiter",
  "zerocopy",
-]
-
-[[package]]
-name = "graft-tracing"
-version = "0.1.5"
-source = "git+https://github.com/ignatz/graft.git?branch=api#60e4b1fe41fab237a9492d8116bc16bf5fd79c20"
-dependencies = [
- "bs58",
- "parking_lot",
- "rand 0.9.2",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -6234,7 +6221,6 @@ dependencies = [
  "matchers",
  "nu-ansi-term",
  "once_cell",
- "parking_lot",
  "regex-automata",
  "serde",
  "serde_json",
@@ -6416,6 +6402,7 @@ dependencies = [
  "arc-swap",
  "argon2",
  "base64",
+ "graft-kernel",
  "graft-sqlite",
  "jsonschema",
  "log",
@@ -6430,6 +6417,7 @@ dependencies = [
  "sqlite-vec",
  "thiserror 2.0.17",
  "trailbase-sqlean",
+ "url",
  "uuid",
  "validator",
 ]
