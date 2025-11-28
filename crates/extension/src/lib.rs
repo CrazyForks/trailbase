@@ -47,7 +47,8 @@ pub fn apply_default_pragmas(conn: &rusqlite::Connection) -> Result<(), rusqlite
 }
 
 #[cfg(feature = "graft")]
-fn graft_config(path: std::path::PathBuf) -> graft_kernel::setup::GraftConfig {
+fn graft_config(url: &url::Url) -> graft_kernel::setup::GraftConfig {
+  let path = PathBuf::from(url.path());
   let data_dir = path.join("local");
   if !data_dir.exists() {
     if let Err(err) = std::fs::create_dir_all(&data_dir) {
@@ -55,6 +56,8 @@ fn graft_config(path: std::path::PathBuf) -> graft_kernel::setup::GraftConfig {
     }
   }
 
+  // Neglect remote for now. We're just experimenting.
+  let remote = graft_kernel::remote::RemoteConfig::Memory;
   // let remote = {
   //   let remote_dir = path.join("remote");
   //   if !remote_dir.exists() {
@@ -65,7 +68,7 @@ fn graft_config(path: std::path::PathBuf) -> graft_kernel::setup::GraftConfig {
 
   return graft_kernel::setup::GraftConfig {
     data_dir,
-    remote: graft_kernel::remote::RemoteConfig::Memory,
+    remote,
     autosync: None,
   };
 }
@@ -82,15 +85,20 @@ pub fn connect_sqlite(
     return Err(Error::Other("Failed to load extensions".into()));
   }
 
+  #[allow(unused_mut)]
+  let mut is_graft = false;
+
   #[cfg(feature = "graft")]
   if let Some(ref path) = path {
+    // Expected someting like "file:///tmp/dir?vfs=graft".
     if let Ok(url) = url::Url::parse(&path.to_string_lossy()) {
       if url.query_pairs().any(|(k, v)| {
         return k == "vfs" && v == "graft";
       }) {
-        let config = graft_config(path.clone());
-        graft_sqlite::register_static("graft", false, config)
+        graft_sqlite::register_static("graft", false, graft_config(&url))
           .map_err(|err| Error::Other(format!("Failed to load Graft VGS: {err}").into()))?;
+
+        is_graft = true;
       }
     }
   }
@@ -104,7 +112,14 @@ pub fn connect_sqlite(
         | OpenFlags::SQLITE_OPEN_NO_MUTEX
         | OpenFlags::SQLITE_OPEN_URI;
 
-      rusqlite::Connection::open_with_flags(p, flags)?
+      rusqlite::Connection::open_with_flags(
+        if is_graft {
+          PathBuf::from("file:main?vfs=graft")
+        } else {
+          p
+        },
+        flags,
+      )?
     } else {
       rusqlite::Connection::open_in_memory()?
     },
@@ -399,5 +414,35 @@ mod test {
       .unwrap();
 
     assert_eq!(id, read_id);
+  }
+
+  #[cfg(feature = "graft")]
+  #[test]
+  fn test_graft() {
+    let tmp_dir = tempfile::TempDir::new().unwrap();
+    let graft_dir = tmp_dir.path();
+
+    {
+      let conn = connect_sqlite(
+        Some(format!("file://{}?vfs=graft", graft_dir.to_string_lossy()).into()),
+        None,
+      )
+      .unwrap();
+
+      conn
+        .execute("CREATE TABLE test (id INTEGER PRIMARY KEY) STRICT", ())
+        .unwrap();
+
+      conn
+        .execute("INSERT INTO test (id) VALUES (?1) ", (5,))
+        .unwrap();
+    }
+
+    let dirs: Vec<_> = std::fs::read_dir(&tmp_dir).unwrap().collect();
+
+    assert!(
+      std::fs::exists(graft_dir.join("local")).unwrap(),
+      "{graft_dir:?}: {dirs:?}"
+    );
   }
 }

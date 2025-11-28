@@ -6415,6 +6415,7 @@ dependencies = [
  "serde_json",
  "sqlite-plugin 0.4.1",
  "sqlite-vec",
+ "tempfile",
  "thiserror 2.0.17",
  "trailbase-sqlean",
  "url",
