@@ -48,14 +48,14 @@ pub fn apply_default_pragmas(conn: &rusqlite::Connection) -> Result<(), rusqlite
 }
 
 // FIXME: unwraps/expects.
-fn graft_config() -> graft::ExtensionConfig {
+fn graft_config() -> graft_sqlite::GraftConfig {
   let path = std::env::current_dir().expect("FIXME").join("graft");
 
   let data_dir = path.join("data");
   if !data_dir.exists() {
     if let Err(err) = std::fs::create_dir_all(&data_dir) {
-            log::error!("Failed to create {data_dir:?}: {err}");
-        }
+      log::error!("Failed to create {data_dir:?}: {err}");
+    }
   }
 
   // let remote = {
@@ -66,12 +66,10 @@ fn graft_config() -> graft::ExtensionConfig {
   //   graft::RemoteConfig::Fs { root: remote_dir }
   // };
 
-  return graft::ExtensionConfig {
+  return graft_sqlite::GraftConfig {
     data_dir,
-    remote: graft::RemoteConfig::Memory,
-    make_default: false,
-    log_file: None,
-    ..Default::default()
+    remote: graft_sqlite::RemoteConfig::Memory,
+    autosync: None,
   };
 }
 
@@ -87,16 +85,11 @@ pub fn connect_sqlite(
     return Err(Error::Other("Failed to load extensions".into()));
   }
 
+  // TODO: This should be conditionally based on url's "vfs" param.
   if path.is_some() {
-    let (opts, vfs) = graft::init_vfs(graft_config()).map_err(|err| {
+    graft_sqlite::register_static(false, graft_config()).map_err(|err| {
       return Error::Other(format!("Failed to load Graft VGS: {err}").into());
     })?;
-
-    if let Err(err) = sqlite_plugin::vfs::register_static(c"graft".to_owned(), vfs, opts) {
-      return Err(Error::Other(
-        format!("Failed to load Graft VGS: {err}").into(),
-      ));
-    }
   }
 
   // Then open database and load trailbase_extensions.
