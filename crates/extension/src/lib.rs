@@ -51,8 +51,11 @@ fn graft_config(url: &url::Url) -> graft_kernel::setup::GraftConfig {
   let path = PathBuf::from(url.path());
   let data_dir = path.join("local");
   if !data_dir.exists() {
-    if let Err(err) = std::fs::create_dir_all(&data_dir) {
-      log::error!("Failed to create {data_dir:?}: {err}");
+    let x = data_dir.join("journals");
+    if let Err(err) = std::fs::create_dir_all(&x) {
+      log::error!("Failed to create {x:?}: {err}");
+    } else {
+      log::info!("Created: {x:?}");
     }
   }
 
@@ -86,19 +89,30 @@ pub fn connect_sqlite(
   }
 
   #[allow(unused_mut)]
-  let mut is_graft = false;
+  let mut graft_tag: Option<PathBuf> = None;
 
   #[cfg(feature = "graft")]
   if let Some(ref path) = path {
-    // Expected someting like "file:///tmp/dir?vfs=graft".
+    // Expected something like "file:///tmp/dir?vfs=graft".
     if let Ok(url) = url::Url::parse(&path.to_string_lossy()) {
       if url.query_pairs().any(|(k, v)| {
         return k == "vfs" && v == "graft";
       }) {
-        graft_sqlite::register_static("graft", false, graft_config(&url))
-          .map_err(|err| Error::Other(format!("Failed to load Graft VGS: {err}").into()))?;
+        use std::sync::OnceLock;
 
-        is_graft = true;
+        static ONCE: OnceLock<Result<(), Error>> = OnceLock::new();
+        ONCE
+          .get_or_init(|| {
+            graft_sqlite::register_static("graft", false, graft_config(&url))
+              .map_err(|err| Error::Other(format!("Failed to load Graft VGS: {err}").into()))
+          })
+          .as_ref()
+          .map_err(|err| Error::Other(err.into()))?;
+
+        use base64::prelude::*;
+        let tag = BASE64_STANDARD.encode(url.path());
+        graft_tag = Some(PathBuf::from(format!("file:{tag}?vfs=graft")));
+        log::info!("Using graft tag: {graft_tag:?}");
       }
     }
   }
@@ -112,14 +126,7 @@ pub fn connect_sqlite(
         | OpenFlags::SQLITE_OPEN_NO_MUTEX
         | OpenFlags::SQLITE_OPEN_URI;
 
-      rusqlite::Connection::open_with_flags(
-        if is_graft {
-          PathBuf::from("file:main?vfs=graft")
-        } else {
-          p
-        },
-        flags,
-      )?
+      rusqlite::Connection::open_with_flags(graft_tag.unwrap_or(p), flags)?
     } else {
       rusqlite::Connection::open_in_memory()?
     },

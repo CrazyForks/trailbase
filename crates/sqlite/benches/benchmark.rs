@@ -51,7 +51,8 @@ impl<C: AsyncConnection> AsyncBenchmarkSetup<C> {
     builder: impl AsyncFn(PathBuf) -> Result<C, BenchmarkError>,
   ) -> Result<Self, BenchmarkError> {
     let tmp_dir = tempfile::TempDir::new().unwrap();
-    let fname = tmp_dir.path().join("main.sqlite");
+    let fname = tmp_dir.path().to_owned();
+    // let fname = tmp_dir.path().join("main.sqlite");
     let conn = builder(fname.clone()).await?;
 
     debug!("Set up: {fname:?}");
