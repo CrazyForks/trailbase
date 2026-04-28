@@ -1,3 +1,12 @@
+## v0.26.7
+
+- Fix CLI regression for `user` and `admin` commands due to DB initialization order changes.
+- Fix missing version identifier in `--version` for CI release builds. There were two issues: shallow checkouts and permissions for docker MUSL builds.
+- Admin UI: For geospatial data show EWKT SRID only when present and fix form prefill during record update for WKT.
+- Add `&skip_cursor` parameter for RecordAPI listing to help with GeoJSON consumers who don't support the `foreign_member` standard extension.
+- More work towards untangling TrailBase from SQLite specifics: make lock acquisition fallible.
+- Update dependencies.
+
 ## v0.26.6
 
 - Admin UI improvements:
